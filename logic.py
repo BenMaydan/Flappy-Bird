@@ -41,7 +41,7 @@ class CollisionEngine:
                 print("Mr. Flappy touched the top of the screen!")
                 sys.exit()
             # Touching the bottom of the screen
-            if coordinate[0] > curses.LINES:
+            if coordinate[0] == curses.LINES:
                 print("GAME OVER!")
                 print("Mr. Flappy touched the bottom of the screen!")
                 sys.exit()
@@ -261,23 +261,16 @@ class Game:
         for pipe in self.pipes[:]:
             # If the pipe doesn't have coordinates (off of the screen) the except block is triggered
             try:
-                if pipe.coordinates[0][1] > 0:
-                    for coord in pipe.move(self, 3):
-                        try:
-                            add(coord[0], coord[1], pipe.char)
-                        except Exception as e:
-                            # If the left of the pipe is starting to go off of the screen
-                            pass
-                else:
-                    # Delete the first four columns of the pipe
+                if pipe.coordinates[0][1] < 0:
+                    # Delete the first three columns of the pipe
                     pipe.delete(0, 1, 2)
-                    # Keep moving the pipe
-                    for coord in pipe.move(self, 3):
-                        try:
-                            add(coord[0], coord[1], pipe.char)
-                        except Exception as e:
-                            # If the left of the pipe is starting to go off of the screen
-                            pass
+                # Keep moving the pipe
+                for coord in pipe.move(self, 3):
+                    try:
+                        add(coord[0], coord[1], pipe.char)
+                    except Exception as e:
+                        # If the left of the pipe is starting to go off of the screen
+                        pass
             except IndexError:
                 # The pipe is off of the screen, deleting it is ok
                 self.pipes.remove(pipe)
@@ -287,7 +280,8 @@ class Game:
 
         # Takes input from the user
         inp = self.getch()
-        # W key or up arrow
+        # 119 = W key
+        # curses.KEY_UP = up arrow
         if inp == 119 or inp == curses.KEY_UP:
             self.bird.flap(self, 3)
             # Checks for collision with the border before updating the coordinates of the bird on the screen

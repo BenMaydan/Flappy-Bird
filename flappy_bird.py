@@ -15,7 +15,6 @@ def save_highscore(score):
 
 
 bird = Bird(char='#')
-collision_engine = CollisionEngine()
 
 
 with Game(bird=bird, sleep=0.2) as game:

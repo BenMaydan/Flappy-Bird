@@ -28,8 +28,30 @@ class CollisionEngine:
     """
     A blueprint for checking collision between the bird and the pipes currently on the screen
     """
-    def __init__(self):
-        pass
+    @staticmethod
+    def border_collision(game):
+        """
+        Checks for collision between the bird and the border
+        :return: True or False
+        """
+        for coordinate in game.bird.coordinates:
+            # Touching the top of the screen
+            if coordinate[0] < 0:
+                print("GAME OVER!")
+                print("Mr. Flappy touched the top of the screen!")
+                sys.exit()
+            # Touching the bottom of the screen
+            if coordinate[0] > curses.LINES:
+                print("GAME OVER!")
+                print("Mr. Flappy touched the bottom of the screen!")
+                sys.exit()
+
+    @staticmethod
+    def pipe_collision(game):
+        """
+        Checks for collision between the bird and a pipe
+        :return:
+        """
 
 
 class Bird:
@@ -248,7 +270,7 @@ class Game:
                             pass
                 else:
                     # Delete the first four columns of the pipe
-                    pipe.delete(0, 1, 2, 3)
+                    pipe.delete(0, 1, 2)
                     # Keep moving the pipe
                     for coord in pipe.move(self, 3):
                         try:
@@ -259,15 +281,24 @@ class Game:
             except IndexError:
                 # The pipe is off of the screen, deleting it is ok
                 self.pipes.remove(pipe)
+                # Pipe can be garbage collected
+                del pipe
         self.refresh()
 
         # Takes input from the user
         inp = self.getch()
         # W key or up arrow
         if inp == 119 or inp == curses.KEY_UP:
-            self.long_add(self.bird.char, self.bird.flap(self, 3))
+            self.bird.flap(self, 3)
+            # Checks for collision with the border before updating the coordinates of the bird on the screen
+            CollisionEngine.border_collision(self)
         else:
-            self.long_add(self.bird.char, self.bird.fall(self, 2))
+            self.bird.fall(self, 2)
+            # Checks for collision with the border before updating the coordinates of the bird on the screen
+            CollisionEngine.border_collision(self)
+
+        # If the game did not end because of a collision, the bird's position is updated
+        self.long_add(self.bird.char, self.bird.coordinates)
         self.refresh()
         time.sleep(self.sleep)
 
@@ -305,7 +336,6 @@ class Game:
         try:
             self.stdscr.addstr(y, x, char)
         except Exception as e:
-            traceback.print_tb(e)
             print("Coordinates given: ({}, {})".format(y, x))
             print(
                 "Max coordinates of the screen in terms of (y, x): ({}, {})".format(curses.LINES - 1, curses.COLS - 1))

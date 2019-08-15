@@ -70,22 +70,25 @@ class Pipe:
         # Sanity check for the parameters
         left = width[0]  # Readability
         right = width[1]  # Readability
-        assert (left > 0), "The minimum x coordinate of the screen is 0 and you gave {}".format(left)
-        assert (right < curses.COLS), "The maximum x coordinate of the screen is {} and you gave {}".format(curses.COLS - 1, right)
-        assert (top > 0), "The minimum y coordinate of the screen is 0 and you gave {} for the top of the opening of the pipe".format(top)
-        assert (bottom < curses.LINES - 1), "The maximum y coordinate of the screen is {} and you gave {} for the bottom of the opening of the pipe".format(curses.LINES, bottom)
-        assert (top > bottom), "Overlapping ends of the opening of the pipe. Top: {}, Bottom: {}".format(top, bottom)
+        assert (left > -1), "The minimum x coordinate of the screen is 0 and you gave {}".format(left)
+        assert (right <= curses.COLS - 1), "The maximum x coordinate of the screen is {} and you gave {}".format(curses.COLS - 1, right)
+        assert (top >= 0), "The minimum y coordinate of the screen is 0 and you gave {} for the top of the opening of " \
+                           "the pipe".format(top)
+        assert (bottom <= curses.LINES), "The maximum y coordinate of the screen is {} and you gave {} for the bottom " \
+                                         "of the opening of the pipe".format(curses.LINES, bottom)
+        assert (top < bottom), "Overlapping ends of the opening of the pipe. Top: {}, Bottom: {}\nRemember, " \
+                               "the x axis in curses starts at the top of the screen and the y coordinate increments " \
+                               "by 1 as it goes down".format(top, bottom)
         self.xrange = width
 
-        for x in range(self.xrange[0], self.xrange[1]):
-            for y in range(self.yrange[0], self.yrange[1]):
+        for y in range(self.yrange[0], self.yrange[1]):
+            for x in range(self.xrange[0], self.xrange[1]):
                 # Makes sure it is not adding coordinates to be drawn in the opening of the pipe
-                if y < top or y > bottom:
-                    print("y, x:", y, x)
+                if y < top or y >= bottom:
                     self.coordinates.append((y, x))
-                # # Don't continue checking if y < top or y > bottom for all of the x's with that same y
-                # else:
-                #     break
+                # Don't continue checking if y < top or y > bottom for all of the x's with that same y
+                else:
+                    break
 
         # Returns the newly made coordinates
         return self.coordinates
@@ -180,5 +183,5 @@ class Game:
             except Exception as e:
                 print("Curses self.stdscr.addstr encountered an ERR")
                 print("Coordinates given: ({}, {})".format(coord[0], coord[1]))
-                print("Max coordinates of the screen in terms of (y, x): ({}, {})".format(curses.LINES, curses.COLS))
+                print("Max coordinates of the screen in terms of (y, x): ({}, {})".format(curses.LINES - 1, curses.COLS - 1))
                 sys.exit()

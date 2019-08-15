@@ -34,16 +34,15 @@ class CollisionEngine:
         Checks for collision between the bird and the border
         :return: True or False
         """
+        assert isinstance(game, Game)
         for coordinate in game.bird.coordinates:
             # Touching the top of the screen
             if coordinate[0] < 0:
-                print("GAME OVER!")
-                print("Mr. Flappy touched the top of the screen!")
+                print("GAME OVER!\n{} {} touched the top of the screen!".format(game.bird.title, game.bird.name))
                 sys.exit()
             # Touching the bottom of the screen
             if coordinate[0] == curses.LINES:
-                print("GAME OVER!")
-                print("Mr. Flappy touched the bottom of the screen!")
+                print("GAME OVER!\n{} {} touched the bottom of the screen!".format(game.bird.title, game.bird.name))
                 sys.exit()
 
     @staticmethod
@@ -52,13 +51,19 @@ class CollisionEngine:
         Checks for collision between the bird and a pipe
         :return:
         """
+        assert isinstance(game, Game)
+        for pipe in game.pipes:
+            for coordinate in game.bird.coordinates:
+                if coordinate in pipe.coordinates:
+                    print("GAME OVER!\n{} {} touched a pipe!".format(game.bird.title, game.bird.name))
+                    sys.exit()
 
 
 class Bird:
     """
     Handles flapping and gravity
     """
-    def __init__(self, char='#'):
+    def __init__(self, title='Mr.', name='Glappy Glird', char='#'):
         self.char = char
         # Size + coordinates
         self.height = None
@@ -66,6 +71,10 @@ class Bird:
         self.x = None
         self.y = None
         self.coordinates = set()
+
+        # Used for printing when the game ends
+        self.title = title
+        self.name = name
 
     def build(self, height=4, width=5, y=30, x=10):
         """
@@ -284,12 +293,12 @@ class Game:
         # curses.KEY_UP = up arrow
         if inp == 119 or inp == curses.KEY_UP:
             self.bird.flap(self, 3)
-            # Checks for collision with the border before updating the coordinates of the bird on the screen
-            CollisionEngine.border_collision(self)
         else:
             self.bird.fall(self, 2)
-            # Checks for collision with the border before updating the coordinates of the bird on the screen
-            CollisionEngine.border_collision(self)
+
+        # Checks for collision with the border before updating the coordinates of the bird on the screen
+        CollisionEngine.border_collision(self)
+        CollisionEngine.pipe_collision(self)
 
         # If the game did not end because of a collision, the bird's position is updated
         self.long_add(self.bird.char, self.bird.coordinates)

@@ -14,7 +14,7 @@ def save_highscore(score):
     """
 
 
-bird = Bird(char='#')
+bird = Bird(title='Mr.', name='Glappy Glird', char='#')
 
 
 with Game(bird=bird, sleep=0.2) as game:
@@ -23,7 +23,7 @@ with Game(bird=bird, sleep=0.2) as game:
     game.refresh()
 
     # Adds the first pipe
-    pipe = Pipe(char='?')
+    pipe = Pipe(char='&')
     game.add_pipe(pipe)
     game.long_add(pipe.char, pipe.build(width=(curses.COLS // 2, curses.COLS // 2 + 10), top=20, bottom=30))
     game.refresh()

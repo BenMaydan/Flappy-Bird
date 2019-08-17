@@ -70,7 +70,7 @@ class CollisionEngine:
         assert isinstance(bird, Bird), "Bird needs to be an instance of the bird class to access it's title and name!"
         for coordinate in bird.coordinates:
             # Touching the top of the screen
-            if coordinate[0] < 0:
+            if coordinate[0] == 0:
                 print(half + "{} {} touched the top of the screen!\nYour score was {}".format(
                     bird.title, bird.name,
                     score_engine.score()) + half)
@@ -112,12 +112,12 @@ class CollisionEngine:
             top_left = bird.coordinates[0]
             bottom_right = bird.coordinates[-1]
             # If the top left coordinate of the bird is in the opening of the pipe
-            if (top_left[0] < pipe.top or top_left[0] > pipe.bottom) and (
+            if (pipe.top > top_left[0] > pipe.bottom) and (
                     pipe.coordinates[0][1] < top_left[1] < pipe.coordinates[-1][1]):
                 score_engine.increase_score()
                 return True
             # If the bottom right coordinate of the bird is in the opening of the pipe
-            elif (bottom_right[0] < pipe.top or bottom_right[0] > pipe.bottom) and (
+            elif (pipe.top > bottom_right[0] > pipe.bottom) and (
                     pipe.coordinates[0][1] < bottom_right[1] < pipe.coordinates[-1][1]):
                 score_engine.increase_score()
                 return True
@@ -203,10 +203,13 @@ class Pipe:
         self.char = char
 
         # Boilerplate code for a method call later to build self
+        if yrange is None:
+            self.yrange = (0, curses.LINES)
+        else:
+            self.yrange = yrange
+        self.xrange = None
         self.top = None
         self.bottom = None
-        self.xrange = None
-        self.yrange = (0, curses.LINES)
         self.coordinates = []
 
     def build(self, width, top, bottom):
@@ -234,15 +237,7 @@ class Pipe:
         self.bottom = bottom
         self.xrange = width
 
-        for y in range(self.yrange[0], self.yrange[1]):
-            for x in range(self.xrange[0], self.xrange[1]):
-                # Makes sure it is not adding coordinates to be drawn in the opening of the pipe
-                if y < top or y >= bottom:
-                    self.coordinates.append((y, x))
-                # Don't continue checking if y < top or y > bottom for all of the x's with that same y
-                else:
-                    break
-
+        self.coordinates = [(y, x) for y in range(self.yrange[0], self.yrange[1]) for x in range(self.xrange[0], self.xrange[1]) if y < top or y >= bottom]
         # Returns the newly made coordinates
         return self.coordinates
 
@@ -359,9 +354,10 @@ class Game:
             self.long_add(pipe.char, pipe.coordinates, exception=lambda: [nothing()])
 
             # If the pipe is completely off of the screen, delete the pipe
-            if pipe.coordinates[-1][1] < 1:
+            if pipe.coordinates[-1][1] < 0:
                 self.pipes.remove(pipe)
                 del pipe
+                continue
         self.refresh()
 
         # Acts off of user input

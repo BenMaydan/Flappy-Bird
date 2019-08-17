@@ -9,6 +9,7 @@ import traceback
 import time
 import curses
 import sys
+import random
 
 
 def nothing():
@@ -212,33 +213,36 @@ class Pipe:
         self.bottom = None
         self.coordinates = []
 
-    def build(self, width, top, bottom):
+    def build(self, width, top, bottom, assertion=True):
         """
         Creates coordinates for the pipe
         :param width: The range of x values for the left side of the pipe to the right side of the pipe
         :param top: The y value for the top of the opening of the pipe
         :param bottom: The y value for the bottom of the opening of the pipe
+        :param assertion: Whether or not this method should assert the values given to it are correct. Unsafe to choose False
         :return: Coordinates to draw the pipe
         """
-        # Sanity check for the parameters
-        left = width[0]  # Readability
-        right = width[1]  # Readability
-        assert (left > -1), "The minimum x coordinate of the screen is 0 and you gave {}".format(left)
-        assert (right <= curses.COLS - 1), "The maximum x coordinate of the screen is {} and you gave {}".format(
-            curses.COLS - 1, right)
-        assert (top >= 0), "The minimum y coordinate of the screen is 0 and you gave {} for the top of the opening of " \
-                           "the pipe".format(top)
-        assert (bottom <= curses.LINES), "The maximum y coordinate of the screen is {} and you gave {} for the bottom " \
-                                         "of the opening of the pipe".format(curses.LINES, bottom)
-        assert (top < bottom), "Overlapping ends of the opening of the pipe. Top: {}, Bottom: {}\nRemember, " \
-                               "the x axis in curses starts at the top of the screen and the y coordinate increments " \
-                               "by 1 as it goes down".format(top, bottom)
+        if assertion:
+            # Sanity check for the parameters
+            left = width[0]  # Readability
+            right = width[1]  # Readability
+            assert (left > -1), "The minimum x coordinate of the screen is 0 and you gave {}".format(left)
+            assert (right <= curses.COLS - 1), "The maximum x coordinate of the screen is {} and you gave {}".format(
+                curses.COLS - 1, right)
+            assert (top >= 0), "The minimum y coordinate of the screen is 0 and you gave {} for the top of the " \
+                               "opening of the pipe".format(top)
+            assert (bottom <= curses.LINES), "The maximum y coordinate of the screen is {} and you gave {} for the " \
+                                             "bottom of the opening of the pipe".format(curses.LINES, bottom)
+            assert (top < bottom), "Overlapping ends of the opening of the pipe. Top: {}, Bottom: {}\nRemember, " \
+                                   "the x axis in curses starts at the top of the screen and the y coordinate " \
+                                   "increments " \
+                                   "by 1 as it goes down".format(top, bottom)
         self.top = top
         self.bottom = bottom
         self.xrange = width
 
-        self.coordinates = [(y, x) for y in range(self.yrange[0], self.yrange[1]) for x in range(self.xrange[0], self.xrange[1]) if y < top or y >= bottom]
-        # Returns the newly made coordinates
+        self.coordinates = [(y, x) for y in range(self.yrange[0], self.yrange[1]) for x in
+                            range(self.xrange[0], self.xrange[1]) if y < top or y >= bottom]
         return self.coordinates
 
     def delete(self, *x):
@@ -294,6 +298,7 @@ class Game:
         assert (type(sleep) in [int, float]), "The value of sleep must be an integer or a float"
         assert (sleep >= 0), "The integer value of sleep must be greater than 0"
         self.tick_value = 0
+        self.gen_pipe_tick = 0
         self.sleep = sleep
 
         # This score will be printed at the end. It is incremented every time the snake eats a piece of food
@@ -376,6 +381,19 @@ class Game:
                 self.bird.fall(self, 2)
                 self.tick_value += 1
 
+        # Checks if it is time to generate a pipe
+        if self.gen_pipe_tick >= 10:
+            new_pipe = Pipe('&')
+            random_top = random.randint((curses.LINES // 4) - 10, (curses.LINES // 4) + 10)
+            random_bottom = random.randint(((curses.LINES // 4) * 3) - 10, ((curses.LINES // 4) * 3) + 10)
+            new_pipe.build(width=(self.pipes[-1].xrange[0] + 10, self.pipes[-1].xrange[1] + 10), top=random_top,
+                           bottom=random_bottom, assertion=False)
+            self.add_pipe(new_pipe)
+            self.long_add(new_pipe.char, new_pipe.coordinates, exception=lambda: [nothing()])
+            self.gen_pipe_tick = 0
+        else:
+            self.gen_pipe_tick += 1
+
         # Checks for collision before updating the coordinates of the bird on the screen
         CollisionEngine.border_collision(self.ScoreEngine, self.bird)
         CollisionEngine.pipe_collision(self.ScoreEngine, self.bird, self.pipes)
@@ -385,6 +403,8 @@ class Game:
         self.long_add(self.bird.char, self.bird.coordinates)
         self.refresh()
         time.sleep(self.sleep)
+
+        self.gen_pipe_tick += 1
 
     def getch(self):
         """

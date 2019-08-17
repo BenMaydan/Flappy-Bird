@@ -1,5 +1,6 @@
 # A Flappy Bird Clone, Glappy Gird
 # Made by Ben Maydan
+# A curses exception is caused by curses.ERR
 
 from logic import Game, Bird, Pipe, CollisionEngine, increasing
 import curses
@@ -32,7 +33,6 @@ with Game(bird=bird, sleep=0.2) as game:
     pipe2 = Pipe(char='&')
     game.add_pipe(pipe2)
     game.long_add(pipe.char, pipe2.build(width=(130, 140), top=45, bottom=55))
-    print(pipe2.coordinates)
 
     game.refresh()
 

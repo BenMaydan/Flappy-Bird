@@ -11,6 +11,10 @@ import curses
 import sys
 
 
+def nothing():
+    pass
+
+
 def increasing(values, amount):
     """
     Checks if every value in a list of values increases by some arbitrary amount
@@ -62,18 +66,21 @@ class CollisionEngine:
         Checks for collision between the bird and the border
         :return: True or False
         """
+        half = (int(curses.LINES / 2) * "\n")
         assert isinstance(bird, Bird), "Bird needs to be an instance of the bird class to access it's title and name!"
         for coordinate in bird.coordinates:
             # Touching the top of the screen
             if coordinate[0] < 0:
-                print("{} {} touched the top of the screen!\nYour score was {}".format(bird.title, bird.name,
-                                                                                       score_engine.score()))
+                print(half + "{} {} touched the top of the screen!\nYour score was {}".format(
+                    bird.title, bird.name,
+                    score_engine.score()) + half)
                 sys.exit()
             # Touching the bottom of the screen
             if coordinate[0] == curses.LINES:
-                print("GAME OVER!\n{} {} touched the bottom of the screen!\nYour score was {}".format(bird.title,
-                                                                                                      bird.name,
-                                                                                                      score_engine.score()))
+                print(half + "GAME OVER!\n{} {} touched the bottom of the screen!\nYour score was {}".format(
+                    bird.title,
+                    bird.name,
+                    score_engine.score()) + half)
                 sys.exit()
 
     @staticmethod
@@ -82,12 +89,14 @@ class CollisionEngine:
         Checks for collision between the bird and a pipe
         :return: None
         """
+        half = (int(curses.LINES / 2) * "\n")
         assert isinstance(bird, Bird)
         for pipe in pipes:
             for coordinate in bird.coordinates:
                 if coordinate in pipe.coordinates:
-                    print(
-                        "{} {} touched a pipe!\nYour score was: {}".format(bird.title, bird.name, score_engine.score()))
+                    print(half + "{} {} touched a pipe!\nYour score was: {}".format(bird.title,
+                                                                                    bird.name,
+                                                                                    score_engine.score()) + half)
                     sys.exit()
 
     @staticmethod
@@ -104,12 +113,12 @@ class CollisionEngine:
             bottom_right = bird.coordinates[-1]
             # If the top left coordinate of the bird is in the opening of the pipe
             if (top_left[0] < pipe.top or top_left[0] > pipe.bottom) and (
-                    top_left[1] > pipe.coordinates[0][1] and top_left < pipe.coordinates[-1][1]):
+                    pipe.coordinates[0][1] < top_left[1] < pipe.coordinates[-1][1]):
                 score_engine.increase_score()
                 return True
             # If the bottom right coordinate of the bird is in the opening of the pipe
             elif (bottom_right[0] < pipe.top or bottom_right[0] > pipe.bottom) and (
-                    bottom_right[1] > pipe.coordinates[0][1] and bottom_right < pipe.coordinates[-1][1]):
+                    pipe.coordinates[0][1] < bottom_right[1] < pipe.coordinates[-1][1]):
                 score_engine.increase_score()
                 return True
         return False
@@ -269,12 +278,7 @@ class Pipe:
         :return: The new coordinates
         """
         # Deletes the pipe on the screen before redrawing. If parts of the pipe are off the screen, it is ignored
-        for coordinate in self.coordinates:
-            try:
-                game.stdscr.addstr(coordinate[0], coordinate[1], " ")
-            except Exception:
-                # Ignore if pipe is slightly off of the screen, that will be handled in tick
-                pass
+        game.long_add(" ", self.coordinates, exception=lambda: nothing())
 
         # Adjusts every coordinate that makes up the bird to move up some amount
         self.coordinates = list(map(lambda coordinate: (coordinate[0], coordinate[1] - amount), self.coordinates))
@@ -351,14 +355,8 @@ class Game:
             # Move the pipe backwards
             pipe.move(self, 3)
 
-            # Draw the new pipe. If there is a curses error, delete that column
-            columns_to_delete = set()
-            current_column = 0
-            for coord in pipe.coordinates:
-                try:
-                    self.stdscr.addstr(coord[0], coord[1], pipe.char)
-                except Exception as e:
-                    pass
+            # Draw the new pipe. If there is a curses error, ignore it
+            self.long_add(pipe.char, pipe.coordinates, exception=lambda: [nothing()])
 
             # If the pipe is completely off of the screen, delete the pipe
             if pipe.coordinates[-1][1] < 1:
@@ -415,41 +413,43 @@ class Game:
         assert isinstance(pipe, Pipe)
         self.pipes.append(pipe)
 
-    def add(self, char, y, x):
+    def add(self, char, y, x, exception=lambda: [print("The curses library cannot draw coordinates that are off of "
+                                                       "the screen!"), sys.exit()]):
         """
         Draws a single character
         :param char: The character to draw
         :param x: The x coordinate
         :param y: The y coordinate
+        :param exception: Performs custom logic when a curses error happens (character is off of the screen)
         :return: None
         """
+        add = self.stdscr.addstr
         try:
-            self.stdscr.addstr(y, x, char)
+            add(y, x, char)
         except Exception as e:
-            print("Coordinates given: ({}, {})".format(y, x))
-            print(
-                "Max coordinates of the screen in terms of (y, x): ({}, {})".format(curses.LINES - 1, curses.COLS - 1))
-            sys.exit()
+            exception()
 
-    def long_add(self, char, coords):
+    def long_add(self, char, coords, exception=lambda: [print("Curses cannot draw coordinates that are off of the "
+                                                              "screen!"), sys.exit()]):
         """
         Draws an arbitrary number of characters
         :param char: The unicode character to draw
         :param coords: The coordinates of all of the character
+        :param exception: Performs custom logic when a curses error happens (character is off of the screen)
         :return: None
         """
+        add = self.add
         for coord in coords:
-            self.add(char, coord[0], coord[1])
-        # map is faster
-        # map(lambda coord: self.add(char, coord[0], coord[1]), coords)
+            add(char, coord[0], coord[1], exception=exception)
 
-    def long_del(self, coords):
+    def long_del(self, coords, exception=lambda: [print("Curses cannot draw coordinates that are off of the "
+                                                        "screen!"), sys.exit()]):
         """
         Deletes all of the characters at the given coordinates. I.E. Replace with a space
         :param coords: The coordinates of the characters
+        :param exception: Performs custom logic when a curses error happens (character is off of the screen)
         :return: None
         """
+        add = self.add
         for coord in coords:
-            self.add(' ', coord[0], coord[1])
-        # map is faster
-        # map(lambda coord: self.add(' ', coord[0], coord[1]), coords)
+            add(' ', coord[0], coord[1], exception=exception)

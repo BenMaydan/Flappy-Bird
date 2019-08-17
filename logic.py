@@ -97,9 +97,10 @@ class CollisionEngine:
         """
         half = (int(curses.LINES / 2) * "\n")
         assert isinstance(bird, Bird)
+
         for pipe in pipes:
-            for coordinate in bird.coordinates:
-                if coordinate in pipe.coordinates:
+            for coordinate in bird.border_coordinates:
+                if coordinate in pipe.border_coordinates:
                     print(half + "{} {} touched a pipe!\nYour score was: {}".format(bird.title,
                                                                                     bird.name,
                                                                                     score_engine.score()) + half)
@@ -142,6 +143,8 @@ class Bird:
         self.width = None
         self.x = None
         self.y = None
+
+        self.border_coordinates = []
         self.coordinates = []
 
         # Used for printing when the game ends
@@ -161,9 +164,13 @@ class Bird:
         self.width = width
         self.x = x
         self.y = y
-        for y_coord in range(y, y + height):
-            for x_coord in range(x, x + width):
-                self.coordinates.append((y_coord, x_coord))
+
+        # Creates the coordinates
+        self.coordinates = [(y_coord, x_coord) for y_coord in range(y, y + height) for x_coord in range(x, x + width)]
+        # Coordinates of the (right side + top + bottom) of the bird because that is the only part that can touch the
+        # pipes
+        self.border_coordinates = [coord for coord in self.coordinates if ((coord[0] >= y and coord[1] == x + width - 1) or (coord[0] == y and coord[1] >= x) or (coord[0] == y + height - 1 and coord[1] >= x))]
+
         return self.coordinates
 
     def flap(self, game, amount):
@@ -177,6 +184,7 @@ class Bird:
         game.long_del(self.coordinates)
         # Adjusts every coordinate that makes up the bird to move up some amount
         self.coordinates = list(map(lambda coordinate: (coordinate[0] - amount, coordinate[1]), self.coordinates))
+        self.border_coordinates = list(map(lambda coordinate: (coordinate[0] - amount, coordinate[1]), self.border_coordinates))
         return self.coordinates
 
     def fall(self, game, amount):
@@ -190,6 +198,7 @@ class Bird:
         game.long_del(self.coordinates)
         # Adjusts every coordinate that makes up the bird to move up some amount
         self.coordinates = list(map(lambda coordinate: (coordinate[0] + amount, coordinate[1]), self.coordinates))
+        self.border_coordinates = list(map(lambda coordinate: (coordinate[0] + amount, coordinate[1]), self.border_coordinates))
         return self.coordinates
 
     def coast(self):
@@ -216,6 +225,8 @@ class Pipe:
         self.xrange = None
         self.top = None
         self.bottom = None
+
+        self.border_coordinates = []
         self.coordinates = []
 
     def build(self, width, top, bottom, assertion=True):
@@ -227,10 +238,10 @@ class Pipe:
         :param assertion: Whether or not this method should assert the values given to it are correct. Unsafe to choose False
         :return: Coordinates to draw the pipe
         """
+        left = width[0]  # Readability
+        right = width[1]  # Readability
         if assertion:
             # Sanity check for the parameters
-            left = width[0]  # Readability
-            right = width[1]  # Readability
             assert (left > -1), "The minimum x coordinate of the screen is 0 and you gave {}".format(left)
             assert (right <= curses.COLS - 1), "The maximum x coordinate of the screen is {} and you gave {}".format(
                 curses.COLS - 1, right)
@@ -248,6 +259,10 @@ class Pipe:
 
         self.coordinates = [(y, x) for y in range(self.yrange[0], self.yrange[1]) for x in
                             range(self.xrange[0], self.xrange[1]) if y < top or y >= bottom]
+        # Border coordinates is the (left + top opening + bottom opening) coordinates of the pipe
+        self.border_coordinates = [coord for coord in self.coordinates if ((coord[0] >= 0 and coord[1] == left) or (coord[0] == top - 1 and coord[1] >= left) or (coord[0] == bottom + 1 and coord[1] >= left))]
+        print(self.border_coordinates)
+        sys.exit()
         return self.coordinates
 
     def delete(self, *x):
@@ -286,6 +301,7 @@ class Pipe:
 
         # Adjusts every coordinate that makes up the bird to move up some amount
         self.coordinates = list(map(lambda coordinate: (coordinate[0], coordinate[1] - amount), self.coordinates))
+        self.border_coordinates = list(map(lambda coordinate: (coordinate[0], coordinate[1] - amount), self.border_coordinates))
         return self.coordinates
 
 
@@ -387,7 +403,7 @@ class Game:
 
         # Checks if it is time to generate a pipe
         if self.gen_pipe_tick >= 10:
-            new_pipe = Pipe('=')
+            new_pipe = Pipe('&')
             random_top = random.randint((curses.LINES // 4) - 7, (curses.LINES // 4) + 7)
             random_bottom = random.randint(((curses.LINES // 4) * 3) - 7, ((curses.LINES // 4) * 3) + 7)
             new_pipe.build(width=(self.pipes[-1].xrange[0] + 10, self.pipes[-1].xrange[1] + 10), top=random_top,

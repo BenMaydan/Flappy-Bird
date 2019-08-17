@@ -261,8 +261,6 @@ class Pipe:
                             range(self.xrange[0], self.xrange[1]) if y < top or y >= bottom]
         # Border coordinates is the (left + top opening + bottom opening) coordinates of the pipe
         self.border_coordinates = [coord for coord in self.coordinates if ((coord[0] >= 0 and coord[1] == left) or (coord[0] == top - 1 and coord[1] >= left) or (coord[0] == bottom + 1 and coord[1] >= left))]
-        print(self.border_coordinates)
-        sys.exit()
         return self.coordinates
 
     def delete(self, *x):

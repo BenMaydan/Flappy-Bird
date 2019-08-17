@@ -67,22 +67,27 @@ class CollisionEngine:
         Checks for collision between the bird and the border
         :return: True or False
         """
+        # To improve performance checking for border collision
+        # Only the top left and the bottom right of the bird are checked if they are touching the border
+        top_left = bird.coordinates[0]
+        bottom_right = bird.coordinates[-1]
+
         half = (int(curses.LINES / 2) * "\n")
         assert isinstance(bird, Bird), "Bird needs to be an instance of the bird class to access it's title and name!"
-        for coordinate in bird.coordinates:
-            # Touching the top of the screen
-            if coordinate[0] == 0:
-                print(half + "{} {} touched the top of the screen!\nYour score was {}".format(
-                    bird.title, bird.name,
-                    score_engine.score()) + half)
-                sys.exit()
-            # Touching the bottom of the screen
-            if coordinate[0] == curses.LINES:
-                print(half + "GAME OVER!\n{} {} touched the bottom of the screen!\nYour score was {}".format(
-                    bird.title,
-                    bird.name,
-                    score_engine.score()) + half)
-                sys.exit()
+
+        # Touching the top of the screen
+        if top_left[0] == 0:
+            print(half + "{} {} touched the top of the screen!\nYour score was {}".format(
+                bird.title, bird.name,
+                score_engine.score()) + half)
+            sys.exit()
+        # Touching the bottom of the screen
+        if bottom_right[0] >= curses.LINES:
+            print(half + "GAME OVER!\n{} {} touched the bottom of the screen!\nYour score was {}".format(
+                bird.title,
+                bird.name,
+                score_engine.score()) + half)
+            sys.exit()
 
     @staticmethod
     def pipe_collision(score_engine, bird, pipes):
@@ -363,7 +368,6 @@ class Game:
                 self.pipes.remove(pipe)
                 del pipe
                 continue
-        self.refresh()
 
         # Acts off of user input
         inp = self.getch()
@@ -383,9 +387,9 @@ class Game:
 
         # Checks if it is time to generate a pipe
         if self.gen_pipe_tick >= 10:
-            new_pipe = Pipe('&')
-            random_top = random.randint((curses.LINES // 4) - 10, (curses.LINES // 4) + 10)
-            random_bottom = random.randint(((curses.LINES // 4) * 3) - 10, ((curses.LINES // 4) * 3) + 10)
+            new_pipe = Pipe('=')
+            random_top = random.randint((curses.LINES // 4) - 7, (curses.LINES // 4) + 7)
+            random_bottom = random.randint(((curses.LINES // 4) * 3) - 7, ((curses.LINES // 4) * 3) + 7)
             new_pipe.build(width=(self.pipes[-1].xrange[0] + 10, self.pipes[-1].xrange[1] + 10), top=random_top,
                            bottom=random_bottom, assertion=False)
             self.add_pipe(new_pipe)
